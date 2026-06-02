@@ -129,6 +129,20 @@ class Start extends Phaser.Scene {
         this.creditsButton.on("pointerover", () => { this.creditsButton.setScale(1.1); });
         this.creditsButton.on("pointerout", () => { this.creditsButton.setScale(1); });
 
+        this.time.delayedCall(500, () => {
+            this.startedIntro = true;
+
+            my.sprite.player.setFlip(true, false);
+            my.sprite.player.body.setVelocityX(120);
+            my.sprite.player.anims.play("walk", true);
+        });
+        
+
+        this.time.delayedCall(900, () => {
+            my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
+            my.sprite.player.anims.play("jump", true);
+        });
+
         this.cameras.main.ignore([this.titleText, this.startButton, this.levelSelectButton, this.creditsButton, diamondIcon1, diamondIcon2]);
         this.uiCamera.ignore([this.sky, this.bg, this.ground, my.sprite.player]);
     }
