@@ -13,7 +13,7 @@ class Platformer extends Phaser.Scene {
         this.JUMP_VELOCITY = -650;
         this.SCALE = 2.5;
         this.PARTICLE_VELOCITY = 50;
-        this.hasDoubleJumped = false; // Oliver - Fixing Double Jump pt.1
+        this.hasDoubleJumped = false;
         this.score = 0;
         this.diamondsLeft = 6;
         this.levelEnd = false;
@@ -35,24 +35,31 @@ class Platformer extends Phaser.Scene {
         // 45 tiles wide and 25 tiles tall.
         this.map = this.add.tilemap("stage-" + selectedLevel);
 
-        this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels + 100);
+        this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels + 5000);
         this.physics.world.checkCollision.up = false;
-        
+
         this.tileset = this.map.addTilesetImage("kenny_tilemap_packed", "tilemap_tiles");
         this.bgTileset = this.map.addTilesetImage("tilemap-backgrounds_packed", "background_tiles");
-        this.industrialTileset = this.map.addTilesetImage("pixel_platformer_industrial_tilemap_packed", "industrial_tiles");
+        this.industrialTileset = this.map.addTilesetImage("pixel_platformer_industrial_tilemap_packed",    "industrial_tiles");
+        this.bgPinkTileset = this.map.addTilesetImage("tilemap-backgrounds_pink", "backgrounds_pink_tiles");
+        this.foodTileset = this.map.addTilesetImage("tilemap_packed_food", "food_tiles");
+        this.packedTileset = this.map.addTilesetImage("tilemap_packed", "tilemap_packed_tiles");
 
-        this.skyLayer = this.map.createLayer("Sky", this.bgTileset, 0, 0);
+        const bgTilesets = [this.bgTileset, this.bgPinkTileset].filter(Boolean);
+        const groundTilesets = [this.tileset, this.industrialTileset, this.foodTileset, this.packedTileset].filter(Boolean);
+        const collTilesets = [this.tileset, this.packedTileset].filter(Boolean);
 
-        this.groundLayer = this.map.createLayer("Ground-n-Platforms", [this.tileset, this.industrialTileset], 0, 0);
+        this.skyLayer = this.map.createLayer("Sky", bgTilesets, 0, 0);
 
-        this.waterLayer = this.map.createLayer("Water-n-Spikes", [this.tileset, this.industrialTileset], 0, 0);
+        this.groundLayer = this.map.createLayer("Ground-n-Platforms", groundTilesets, 0, 0);
+
+        this.waterLayer = this.map.createLayer("Water-n-Spikes", groundTilesets, 0, 0);
         
-        this.fallingPlatforms = this.map.createLayer("falling-platforms", [this.tileset, this.industrialTileset], 0, 0);
+        this.fallingPlatforms = this.map.createLayer("falling-platforms", groundTilesets, 0, 0);
 
-        this.aesthetics = this.map.createLayer("aesthetics", [this.tileset, this.industrialTileset], 0, 0);
+        this.aesthetics = this.map.createLayer("aesthetics", groundTilesets, 0, 0);
 
-        this.enemyCollisionLayer = this.map.createLayer("Enemy-Collision", this.tileset, 0, 0);
+        this.enemyCollisionLayer = this.map.createLayer("Enemy-Collision", collTilesets, 0, 0);
 
         if(this.sys.animatedTiles) this.sys.animatedTiles.init(this.map);
 
@@ -60,23 +67,24 @@ class Platformer extends Phaser.Scene {
             hazard: true
         });
 
-        this.groundLayer.setCollisionByProperty({
-            collides: true
-        });
+        this.groundLayer.setCollisionByProperty({ collides: true });
+        if (this.groundLayer.filterTiles(t => t.collides).length === 0) {
+            this.groundLayer.setCollisionByExclusion([-1]);
+        }
 
         this.groundLayer.forEachTile(tile => {
-            if (tile.properties.oneway === true){
+            if (tile.properties && tile.properties.oneway === true){
                 tile.setCollision(false, false, true, false);
             }
         });
 
-        this.fallingPlatforms.setCollisionByProperty({
-            collides: true
-        });
-
+        this.fallingPlatforms.setCollisionByProperty({ collides: true });
+        if (this.fallingPlatforms.filterTiles(t => t.collides).length === 0) {
+            this.fallingPlatforms.setCollisionByExclusion([-1]);
+        }
 
         this.fallingPlatforms.forEachTile(tile => {
-            if (tile.properties.oneway === true){
+            if (tile.properties && tile.properties.oneway === true){
                 tile.setCollision(false, false, true, false);
             }
         });
@@ -122,28 +130,45 @@ class Platformer extends Phaser.Scene {
             frame: 131
         });
 
-        this.unkillableEnemies = this.map.createFromObjects("Unkillable_Enemies", {
+        const safeCreate = (layerName, config) => {
+            if (!this.map.getObjectLayer(layerName)) return [];
+            return this.map.createFromObjects(layerName, config);
+        };
+
+        this.unkillableEnemies = safeCreate("Unkillable_Enemies", {
             name: "unkillable_enemies",
             key: "tilemap_characters",
             frame: 16
         });
 
-        this.flyingEnemies = this.map.createFromObjects("Flying_Enemies", {
+        this.flyingEnemies = safeCreate("Flying_Enemies", {
             name: "flying_enemies",
             key: "tilemap_characters",
             frame: 24
         });
 
-        this.enemies = this.map.createFromObjects("Enemies", {
+        this.enemies = safeCreate("Enemies", {
             name: "enemies",
             key: "tilemap_characters",
             frame: 18
         });
 
-        this.mines = this.map.createFromObjects("Mines", {
+        this.mines = safeCreate("Mines", {
             name: "mines",
             key: "tilemap_characters",
             frame: 8
+        });
+
+        this.flying3 = safeCreate("Flying_3", {
+            name: "Flying_3",
+            key: "tilemap_characters",
+            frame: 24
+        });
+
+        this.scissorEnemies = safeCreate("Scissor_Enemies", {
+            name: "Scissor_Enemies",
+            key: "tilemap_characters",
+            frame: 14
         });
 
         // vfx
@@ -230,13 +255,14 @@ class Platformer extends Phaser.Scene {
         this.physics.world.enable(this.endFlag, Phaser.Physics.Arcade.STATIC_BODY);
         this.physics.world.enable(this.endPoles, Phaser.Physics.Arcade.STATIC_BODY);
 
-        this.physics.world.enable(this.unkillableEnemies);
-        this.physics.world.enable(this.flyingEnemies);
-        this.physics.world.enable(this.enemies);
-        this.physics.world.enable(this.mines);
+        if (this.unkillableEnemies.length) this.physics.world.enable(this.unkillableEnemies);
+        if (this.flyingEnemies.length) this.physics.world.enable(this.flyingEnemies);
+        if (this.enemies.length) this.physics.world.enable(this.enemies);
+        if (this.mines.length) this.physics.world.enable(this.mines);
+        if (this.flying3.length) this.physics.world.enable(this.flying3);
+        if (this.scissorEnemies.length) this.physics.world.enable(this.scissorEnemies);
 
-
-        this.checkpointFlagGroup  = this.add.group(this.checkpointFlags);
+        this.checkpointFlagGroup = this.add.group(this.checkpointFlags);
         this.checkpointPoleGroup = this.add.group(this.checkpointPoles);
         this.checkpointFlagGroup.playAnimation('flag_wave');
 
@@ -263,6 +289,8 @@ class Platformer extends Phaser.Scene {
         this.flyingEnemyGroup = this.add.group(this.flyingEnemies);
         this.enemyGroup = this.add.group(this.enemies);
         this.mineGroup = this.add.group(this.mines);
+        this.flying3Group = this.add.group(this.flying3);
+        this.scissorEnemyGroup = this.add.group(this.scissorEnemies);
 
         this.unkillableEnemyGroup.children.iterate(enemy => {
             enemy.body.setVelocityX(-50);
@@ -291,6 +319,17 @@ class Platformer extends Phaser.Scene {
                 repeat: -1,
                 ease: 'Sine.easeInOut'
             });
+        });
+
+        this.flying3Group.children.iterate(enemy => {
+            enemy.body.setAllowGravity(false);
+            enemy.startY = enemy.y;
+            enemy.body.setVelocityY(-45); 
+        });
+
+        this.scissorEnemyGroup.children.iterate(enemy => {
+            enemy.body.setAllowGravity(true);
+            enemy.body.setVelocityX(40);
         });
 
         my.sprite.player = this.physics.add.sprite(30, 200, "platformer_characters", "tile_0000.png");
@@ -333,6 +372,37 @@ class Platformer extends Phaser.Scene {
 
         this.physics.add.collider(this.enemyGroup, this.enemyCollisionLayer);
         this.physics.add.collider(this.unkillableEnemyGroup, this.enemyCollisionLayer);
+        this.physics.add.collider(this.scissorEnemyGroup, this.groundLayer);
+        this.physics.add.collider(this.scissorEnemyGroup, this.fallingPlatforms);
+
+        this.physics.add.overlap(my.sprite.player, this.flying3Group, (player, enemy) => {
+            if (player.body.velocity.y > 0 && player.y < enemy.y) {
+                enemy.destroy();
+                my.vfx.enemyPoof.explode(10, enemy.x, enemy.y);
+                this.enemy_kill_sfx.play();
+                player.body.setVelocityY(this.JUMP_VELOCITY / 1.5);
+                this.score += 150;
+                this.scoreText.setText(String(this.score).padStart(4, "0"));
+            } else {
+                this.respawnPlayer(player);
+                this.player_hit_sfx.play();
+                player.body.setVelocity(0, 0);
+            }
+        }, null, this);
+
+        this.physics.add.overlap(my.sprite.player, this.scissorEnemyGroup, (player, enemy) => {
+            if(this.isSliding){
+                enemy.destroy();
+                my.vfx.enemyPoof.explode(10, enemy.x, enemy.y);
+                this.enemy_kill_sfx.play();
+                this.score += 200;
+                this.scoreText.setText(String(this.score).padStart(4, "0"));
+            } else {
+                this.player_hit_sfx.play();
+                this.respawnPlayer(player);
+                player.body.setVelocity(0, 0);
+            }
+        }, null, this);
 
         this.physics.add.overlap(my.sprite.player, this.coinGroup, (obj1, obj2) => {
             obj2.destroy();
@@ -526,6 +596,8 @@ class Platformer extends Phaser.Scene {
             this.flyingEnemyGroup,
             this.enemyGroup,
             this.mineGroup,
+            this.flying3Group,
+            this.scissorEnemyGroup,
             this.enemyCollisionLayer,
 
             my.vfx.movement,
@@ -564,6 +636,12 @@ class Platformer extends Phaser.Scene {
             return; 
         }
 
+        // Void death
+        if(my.sprite.player.y > this.map.heightInPixels + 50){
+            this.player_hit_sfx.play();
+            this.respawnPlayer(my.sprite.player);
+        }
+
         const onGround = my.sprite.player.body.blocked.down;
         const slideKeyHeld = cursors.down.isDown || this.wasd.down.isDown;
         const atFullSpeed = Math.abs(my.sprite.player.body.velocity.x) >= this.MAX_SPEED - 20;
@@ -598,21 +676,21 @@ class Platformer extends Phaser.Scene {
             // Oliver - Slide mechanic: start slide hold S/down
             if(hasSlide && !this.isSliding && slideKeyHeld && atFullSpeed && onGround){
                 this.isSliding = true;
-                my.sprite.player.body.setSize(22, 11);
-                my.sprite.player.body.setOffset(0, 11);
-                my.sprite.player.setScale(1, 0.5);
+                this.slideDirection = Math.sign(my.sprite.player.body.velocity.x);
+                my.sprite.player.body.setSize(22, 8);
+                my.sprite.player.body.setOffset(0, 14);
             }
 
-            if(this.isSliding && (!slideKeyHeld || !onGround)){
+            const slideStopped = Math.abs(my.sprite.player.body.velocity.x) < 10;
+            if(this.isSliding && (!slideKeyHeld || !onGround || slideStopped)){
                 this.isSliding = false;
                 my.sprite.player.body.setSize(22, 22);
                 my.sprite.player.body.setOffset(0, 0);
-                my.sprite.player.setScale(1, 1);
             }
 
             if(this.isSliding){
                 my.sprite.player.body.setAccelerationX(0);
-                my.sprite.player.body.setDragX(300);
+                my.sprite.player.body.setDragX(80);
                 my.sprite.player.anims.play('idle', true);
                 my.vfx.movement.stop();
 
@@ -698,6 +776,40 @@ class Platformer extends Phaser.Scene {
                 this.physics.moveToObject(enemy, my.sprite.player, 50);
             } else {
                 enemy.body.setVelocity(0, 0);
+            }
+        });
+
+        this.flying3Group.children.iterate(enemy => {
+            if(!enemy || !enemy.body){ return; }
+            enemy.play('enemy_fly', true);
+            const patrolRange = 18 * 4.5; // 4.5 tiles
+            if(enemy.y <= enemy.startY - patrolRange){
+                enemy.body.setVelocityY(45); // reached top — go down
+            } else if(enemy.y >= enemy.startY + patrolRange){
+                enemy.body.setVelocityY(-45); // reached bottom — go up
+            }
+        });
+
+        this.scissorEnemyGroup.children.iterate(enemy => {
+            if(!enemy || !enemy.body){ return; }
+            enemy.play('enemy_walk', true);
+
+            // Wall reversal
+            if(enemy.body.blocked.left){
+                enemy.body.setVelocityX(40);
+                enemy.setFlipX(true);
+            } else if(enemy.body.blocked.right){
+                enemy.body.setVelocityX(-40);
+                enemy.resetFlip();
+            }
+
+            const dir = enemy.body.velocity.x > 0 ? 1 : -1;
+            const edgeCheckX = enemy.x + dir * (enemy.width / 2 + 2);
+            const edgeCheckY = enemy.y + enemy.height / 2 + 4;
+            const tileBelow = this.groundLayer.getTileAtWorldXY(edgeCheckX, edgeCheckY);
+            if(!tileBelow && enemy.body.blocked.down){
+                enemy.body.setVelocityX(-enemy.body.velocity.x);
+                if(dir > 0){ enemy.resetFlip(); } else { enemy.setFlipX(true); }
             }
         });
     }

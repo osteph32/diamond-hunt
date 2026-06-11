@@ -40,8 +40,8 @@ const SCALE = 2.0;
 var my = {sprite: {}, text: {}};
 var selectedLevel = 1;
 var levelsUnlocked = 1;  // tracks played levels
-var hasSlide = true;
-var hasDash = true;
+var hasSlide = false;
+var hasDash = false;
 var gameStartTime = 0;
 
 const game = new Phaser.Game(config);
