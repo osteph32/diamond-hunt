@@ -619,6 +619,7 @@ class Platformer extends Phaser.Scene {
             down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
         };
         this.spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
         // Camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -651,19 +652,9 @@ class Platformer extends Phaser.Scene {
 
         // Kieran - Dash mechanic: Double tap direction key
         if(hasDash && !this.isDashing && !this.dashCooldown && !this.isSliding){
-            if(leftJustDown){
-                const now = this.time.now;
-                if(now - this.lastLeftTap < this.DASH_TAP_WINDOW){
-                    this.startDash(-1);
-                }
-                this.lastLeftTap = now;
-            }
-            if(rightJustDown){
-                const now = this.time.now;
-                if(now - this.lastRightTap < this.DASH_TAP_WINDOW){
-                    this.startDash(1);
-                }
-                this.lastRightTap = now;
+            if(Phaser.Input.Keyboard.JustDown(this.fKey)){
+                const direction = my.sprite.player.flipX ? 1 : -1;
+                this.startDash(direction);
             }
         }
 
@@ -672,6 +663,7 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.body.setDragX(0);
             my.sprite.player.anims.play('walk', true);
             my.vfx.movement.stop();
+            
         } else {
             // Oliver - Slide mechanic: start slide hold S/down
             if(hasSlide && !this.isSliding && slideKeyHeld && atFullSpeed && onGround){
@@ -854,7 +846,9 @@ class Platformer extends Phaser.Scene {
         } else {
             my.sprite.player.setFlip(true, false);
         }
-
+        
+        my.sprite.player.body.setAllowGravity(false);
+        my.sprite.player.body.setVelocityY(0);
         my.sprite.player.body.setMaxVelocityX(this.DASH_VELOCITY);
         my.sprite.player.body.setVelocityX(this.DASH_VELOCITY * direction);
         my.sprite.player.body.setAccelerationX(0);
@@ -866,6 +860,7 @@ class Platformer extends Phaser.Scene {
             this.isDashing = false;
             this.dashCooldown = true;
 
+            my.sprite.player.body.setAllowGravity(true);
             my.sprite.player.body.setMaxVelocityX(this.MAX_SPEED);
 
             this.time.delayedCall(this.DASH_COOLDOWN, () => {
