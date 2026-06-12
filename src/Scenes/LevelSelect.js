@@ -58,7 +58,11 @@ class LevelSelect extends Phaser.Scene {
 
                 playBtn.on("pointerdown", () => {
                     selectedLevel = lvl.num;
-                    this.scene.start("loadScene");
+                    if(selectedLevel === 2){
+                        this.scene.start("cutscene1_2Scene");
+                    } else if (selectedLevel === 3){
+                        this.scene.start("cutscene2_3scene");
+                    }
                 });
                 playBtn.on("pointerover", () => { playBtn.setScale(1.1); });
                 playBtn.on("pointerout",  () => { playBtn.setScale(1); });

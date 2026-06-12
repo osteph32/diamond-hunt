@@ -1577,19 +1577,6 @@
                 {
                  "gid":344,
                  "height":22,
-                 "id":119,
-                 "name":"crusher_enemies",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":22,
-                 "x":1816,
-                 "y":92.125
-                }, 
-                {
-                 "gid":344,
-                 "height":22,
                  "id":123,
                  "name":"crusher_enemies",
                  "opacity":1,

@@ -602,7 +602,6 @@
   <object id="118" name="flying_enemies" gid="357" x="1278" y="90" width="22" height="22"/>
  </objectgroup>
  <objectgroup id="17" name="Crusher_Enemies">
-  <object id="119" name="crusher_enemies" gid="344" x="1816" y="92.125" width="22" height="22"/>
   <object id="123" name="crusher_enemies" gid="344" x="792" y="144" width="22" height="22"/>
  </objectgroup>
  <objectgroup id="14" name="Enemies">

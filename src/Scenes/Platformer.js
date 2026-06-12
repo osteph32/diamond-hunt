@@ -871,13 +871,7 @@ class Platformer extends Phaser.Scene {
         this.time.delayedCall(3000, () => {
             player.body.setVelocityX(0);
             player.anims.play('idle', true);
-
-            if(selectedLevel < 3){
-                selectedLevel++;
-                this.scene.start("loadScene");
-            } else {
-                this.showEndScreen();
-            }
+            this.showEndScreen();
         });
     }
 
@@ -908,17 +902,22 @@ class Platformer extends Phaser.Scene {
             fontSize: '20px', color: '#aaddff', stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
 
-        let restartButton = this.add.text(centerX, centerY + 55, "Play Again", {
-            fontSize: '20px', color: '#ffffff', backgroundColor: '#333333', padding: {x: 16, y: 8}
+        let restartButton = this.add.text(centerX, centerY + 55, "Restart", {
+            fontSize: '20px', color: '#ffffff', padding: {x: 16, y: 8}
         }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setInteractive();
 
+         let nextLevelButton = this.add.text(centerX, centerY + 82.5, "Next Level", {
+            fontSize: '20px', color: '#ffffff', padding: {x: 16, y: 8}
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setInteractive();
+        if (selectedLevel >= 3){
+            nextLevelButton.setVisible(false).disableInteractive();
+        }
+
         let menuButton = this.add.text(centerX, centerY + 110, "Main Menu", {
-            fontSize: '20px', color: '#ffffff', backgroundColor: '#333333', padding: {x: 16, y: 8}
+            fontSize: '20px', color: '#ffffff', padding: {x: 16, y: 8}
         }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setInteractive();
 
         restartButton.on('pointerdown', () => {
-            selectedLevel = 1;
-            levelsUnlocked = 1;
             gameStartTime = 0;
             this.scene.start("loadScene");
         });
@@ -926,11 +925,24 @@ class Platformer extends Phaser.Scene {
         restartButton.on('pointerover', () => { restartButton.setScale(1.1); });
         restartButton.on('pointerout',  () => { restartButton.setScale(1); });
 
+        nextLevelButton.on('pointerdown', () => {
+            selectedLevel++;
+            gameStartTime = 0;
+            if(selectedLevel === 2){
+                this.scene.start("cutscene1_2Scene");
+            }
+            else if(selectedLevel === 3){
+                this.scene.start("cutscene2_3Scene");
+            }
+        });
+        nextLevelButton.on('pointerover', () => { nextLevelButton.setScale(1.1); });
+        nextLevelButton.on('pointerout',  () => { nextLevelButton.setScale(1); });
+
         menuButton.on('pointerdown', () => { this.scene.start("startScene"); });
         menuButton.on('pointerover', () => { menuButton.setScale(1.1); });
         menuButton.on('pointerout',  () => { menuButton.setScale(1); });
 
-        let endUI = [panel, completeText, finalScoreText, timerText, restartButton, menuButton];
+        let endUI = [panel, completeText, finalScoreText, timerText, restartButton, nextLevelButton, menuButton];
         this.cameras.main.ignore(endUI);
 
         this.tweens.addCounter({
@@ -1194,7 +1206,7 @@ class Platformer extends Phaser.Scene {
                                     ease: "Sine.easeInOut",
                                     onComplete: () => {
                                         enemy.enemyState = "idle";
-                                        enemy.setFrame(12);
+                                        enemy.setFrame(11);
                                     }
                                 });
                             }
