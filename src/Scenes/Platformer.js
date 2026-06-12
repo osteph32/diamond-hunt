@@ -40,7 +40,7 @@ class Platformer extends Phaser.Scene {
 
         this.tileset = this.map.addTilesetImage("kenny_tilemap_packed", "tilemap_tiles");
         this.bgTileset = this.map.addTilesetImage("tilemap-backgrounds_packed", "background_tiles");
-        this.industrialTileset = this.map.addTilesetImage("pixel_platformer_industrial_tilemap_packed",    "industrial_tiles");
+        this.industrialTileset = this.map.addTilesetImage("pixel_platformer_industrial_tilemap_packed", "industrial_tiles");
         this.bgPinkTileset = this.map.addTilesetImage("tilemap-backgrounds_pink", "backgrounds_pink_tiles");
         this.foodTileset = this.map.addTilesetImage("tilemap_packed_food", "food_tiles");
         this.packedTileset = this.map.addTilesetImage("tilemap_packed", "tilemap_packed_tiles");
@@ -60,6 +60,7 @@ class Platformer extends Phaser.Scene {
         this.aesthetics = this.map.createLayer("aesthetics", groundTilesets, 0, 0);
 
         this.enemyCollisionLayer = this.map.createLayer("Enemy-Collision", collTilesets, 0, 0);
+        
 
         if(this.sys.animatedTiles) this.sys.animatedTiles.init(this.map);
 
@@ -157,6 +158,12 @@ class Platformer extends Phaser.Scene {
             name: "mines",
             key: "tilemap_characters",
             frame: 8
+        });
+
+        this.crusherEnemies = safeCreate("Crusher_Enemies", {
+            name: "crusher_enemies",
+            key: "tilemap_characters",
+            frame: 11
         });
 
         this.flying3 = safeCreate("Flying_3", {
@@ -260,6 +267,7 @@ class Platformer extends Phaser.Scene {
         if (this.flyingEnemies.length) this.physics.world.enable(this.flyingEnemies);
         if (this.enemies.length) this.physics.world.enable(this.enemies);
         if (this.mines.length) this.physics.world.enable(this.mines);
+        if (this.crusherEnemies.length) this.physics.world.enable(this.crusherEnemies);
         if (this.flying3.length) this.physics.world.enable(this.flying3);
         if (this.scissorEnemies.length) this.physics.world.enable(this.scissorEnemies);
 
@@ -290,6 +298,7 @@ class Platformer extends Phaser.Scene {
         this.flyingEnemyGroup = this.add.group(this.flyingEnemies);
         this.enemyGroup = this.add.group(this.enemies);
         this.mineGroup = this.add.group(this.mines);
+        this.crusherEnemyGroup = this.add.group(this.crusherEnemies);
         this.flying3Group = this.add.group(this.flying3);
         this.scissorEnemyGroup = this.add.group(this.scissorEnemies);
 
@@ -322,6 +331,10 @@ class Platformer extends Phaser.Scene {
             });
         });
 
+        this.crusherEnemyGroup.children.iterate(enemy => {
+            enemy.body.setAllowGravity(false);
+        });
+
         this.flying3Group.children.iterate(enemy => {
             enemy.body.setAllowGravity(false);
         });
@@ -330,10 +343,6 @@ class Platformer extends Phaser.Scene {
             enemy.body.setAllowGravity(true);
         });
 
-        // Level 3 setup
-        if(selectedLevel === 3){
-            this.setupLevel3Enemies();
-        }
 
         my.sprite.player = this.physics.add.sprite(30, 200, "platformer_characters", "tile_0000.png");
         my.sprite.player.setCollideWorldBounds(true);
@@ -346,6 +355,17 @@ class Platformer extends Phaser.Scene {
             this.player_hit_sfx.play();
             this.respawnPlayer(obj1);
         });
+
+        // Level 2 setup
+        if(selectedLevel === 2){
+            this.setupLevel2(groundTilesets);
+            this.setupLevel2Enemies();
+        }
+
+        // Level 3 setup
+        if(selectedLevel === 3){
+            this.setupLevel3Enemies();
+        }
 
         // Falling platforms 
         this.fallenPlatformTiles = [];
@@ -559,7 +579,10 @@ class Platformer extends Phaser.Scene {
             this.groundLayer, 
             this.waterLayer, 
             this.fallingPlatforms, 
+            this.appearingPlatforms,
             this.aesthetics, 
+            this.aesthetics2,
+            this.aesthetics3,
 
             this.coinGroup, 
             this.diamondGroup, 
@@ -567,11 +590,13 @@ class Platformer extends Phaser.Scene {
             this.checkpointPoleGroup, 
             this.endFlagGroup, 
             this.endPoleGroup, 
+            this.button,
 
             this.unkillableEnemyGroup,
             this.flyingEnemyGroup,
             this.enemyGroup,
             this.mineGroup,
+            this.crusherEnemyGroup,
             this.flying3Group,
             this.scissorEnemyGroup,
             this.enemyCollisionLayer,
@@ -582,7 +607,7 @@ class Platformer extends Phaser.Scene {
             my.vfx.coinCollect,
             my.vfx.enemyPoof,
 
-            my.sprite.player]);
+            my.sprite.player].filter(Boolean));
 
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
@@ -746,6 +771,10 @@ class Platformer extends Phaser.Scene {
                 enemy.body.setVelocity(0, 0);
             }
         });
+
+        if(selectedLevel === 2){
+            this.updateLevel2Enemies();
+        }
 
         // --- Level 3 specific update ---
         if(selectedLevel === 3){
@@ -1022,6 +1051,172 @@ class Platformer extends Phaser.Scene {
         });
     }
 
+    // Level 2 Helpers
+    setupLevel2(groundTilesets){
+        this.aesthetics2 = this.map.createLayer("aesthetics2", groundTilesets, 0, 0);
+
+        this.aesthetics3 = this.map.createLayer("aesthetics3", groundTilesets, 0, 0);
+
+        this.appearingPlatforms = this.map.createLayer("appearing-platforms", groundTilesets, 0, 0);
+        this.appearingPlatforms.setCollisionByProperty({ collides: true });
+            if (this.appearingPlatforms.filterTiles(t => t.collides).length === 0) {
+                this.appearingPlatforms.setCollisionByExclusion([-1]);
+            }
+
+        this.appearingPlatforms.forEachTile(tile => {
+            if (tile.properties && tile.properties.oneway === true){
+                    tile.setCollision(false, false, true, false);
+            }
+        });
+
+        this.appearingCollider = this.physics.add.collider(my.sprite.player, this.appearingPlatforms);
+        this.appearingPlatforms.setVisible(false);
+        this.appearingCollider.active = false;
+        this.appearingActive = false;
+
+        this.button = this.map.createFromObjects("Button",{
+            name: "button",
+            key: "tilemap_sheet",
+            frame: 148
+        });
+
+        this.physics.world.enable(this.button, Phaser.Physics.Arcade.STATIC_BODY);
+
+        this.physics.add.overlap(my.sprite.player, this.button, (player, button) => {
+            if(this.appearingActive){
+                return;
+            }
+            this.activateAppearingPlatforms();
+        }, null, this);
+
+    }
+
+    activateAppearingPlatforms(){
+        const UPTIME = 10000;
+        const WARN_TIME = 3000;
+        
+        this.appearingActive = true;
+
+        if(this.appearingBlink){
+            this.appearingBlink.stop();
+            this.appearingBlink = null;
+        }
+        this.appearingPlatforms.setAlpha(1);
+
+        this.appearingPlatforms.setVisible(true);
+        this.appearingCollider.active = true;
+
+        this.warnTimer = this.time.delayedCall(UPTIME - WARN_TIME, () => {
+            this.appearingBlink = this.tweens.add({
+                targets: this.appearingPlatforms,
+                alpha: 0.2,
+                duration: 180, 
+                yoyo: true, 
+                repeat: -1, 
+                ease: "Linear"
+            });
+        });
+
+        this.time.delayedCall(UPTIME, () => {
+            if(this.appearingBlink){
+                this.appearingBlink.stop();
+                this.appearingBlink = null;
+            }
+
+            this.appearingPlatforms.setAlpha(1);
+            this.appearingPlatforms.setVisible(false);
+            this.appearingCollider.active = false;
+            this.appearingActive = false;
+        });
+    }
+
+    setupLevel2Enemies(){
+        this.crusherEnemyGroup.children.iterate(enemy => {
+            enemy.startY = enemy.y;
+            enemy.enemyState = "idle";
+        });
+
+        this.physics.add.collider(this.crusherEnemyGroup, this.groundLayer);
+
+        this.physics.add.overlap(my.sprite.player, this.crusherEnemyGroup, (player, enemy) => {
+            this.respawnPlayer(player);
+            this.player_hit_sfx.play();
+            player.body.setVelocity(0, 0);
+        });
+    }
+
+    updateLevel2Enemies(){
+        const player = my.sprite.player;
+        const DROP_SPEED = 500;
+        const TRIGGER_WIDTH = 16;
+        const RISE_DURATION = 800;
+
+        this.crusherEnemyGroup.children.iterate(enemy => {
+            if(!enemy || !enemy.body){ return; }
+
+            switch(enemy.enemyState){
+                case "idle": {
+                    const dx = Math.abs(player.body.center.x - enemy.body.center.x);
+                    const playerBelow = player.body.center.y > enemy.body.center.y;
+                    if(dx < TRIGGER_WIDTH && playerBelow){
+                        enemy.enemyState = "warning";
+                        enemy.setFrame(12);
+
+                        this.tweens.add({
+                            targets: enemy,
+                            x: {from: enemy.x - 4, to: enemy.x + 4},
+                            duration: 35,
+                            yoyo: true,
+                            repeat: 5,
+                            ease: "Linear",
+                            onComplete: () => {
+                                if(enemy.active && enemy.enemyState === "warning"){
+                                    enemy.enemyState = "dropping";
+                                    enemy.body.setVelocityY(DROP_SPEED);
+                                }
+                            }
+                        });
+                    }
+                    break;
+                }
+
+                case "dropping": {
+                    if(enemy.body.blocked.down){
+                        enemy.body.setVelocityY(0);
+                        enemy.enemyState = "grounded";
+                        this.time.delayedCall(2000, () => {
+                            if(enemy.active && enemy.enemyState === "grounded"){
+                                enemy.enemyState = "rising";
+                                this.tweens.add({
+                                    targets: enemy,
+                                    y: enemy.startY,
+                                    duration: RISE_DURATION,
+                                    ease: "Sine.easeInOut",
+                                    onComplete: () => {
+                                        enemy.enemyState = "idle";
+                                        enemy.setFrame(12);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    break;
+                }
+            }
+        });
+    }
+
+    resetCrushers(){
+        if(!this.crusherEnemyGroup){ return; }
+        this.crusherEnemyGroup.children.iterate(enemy => {
+            if(!enemy || !enemy.body){ return; }
+            this.tweens.killTweensOf(enemy);
+            enemy.body.setVelocityY(0);
+            enemy.y = enemy.startY;
+            enemy.enemyState = "idle";
+        });
+    }
+
     // Level 3 Helpers
     setupLevel3Enemies() {
         this.flying3Group.children.iterate(enemy => {
@@ -1102,6 +1297,9 @@ class Platformer extends Phaser.Scene {
 
     respawnPlayer(player){
         this.resetFallingPlatforms();
+        if(selectedLevel === 2){
+            this.resetCrushers();
+        }
         player.body.setVelocity(0,0);
         player.body.setAcceleration(0,0);
         player.setPosition(this.spawnX, this.spawnY);
