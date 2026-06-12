@@ -144,7 +144,17 @@ class Load extends Phaser.Scene {
             });
         }
 
-
+        if (!this.anims.exists('scissor_walk')) {
+            this.anims.create({
+                key: 'scissor_walk',
+                frames: this.anims.generateFrameNumbers('tilemap_characters', {
+                    start: 13,
+                    end: 14,
+                }),
+                frameRate: 5,
+                repeat: -1
+            });
+        }
 
          // ...and pass to the next Scene
          this.scene.start("platformerScene");

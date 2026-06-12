@@ -168,8 +168,9 @@ class Platformer extends Phaser.Scene {
         this.scissorEnemies = safeCreate("Scissor_Enemies", {
             name: "Scissor_Enemies",
             key: "tilemap_characters",
-            frame: 14
+            frame: 18
         });
+        this.scissorEnemies.forEach(s => s.setFrame(18));
 
         // vfx
         my.vfx = {};
@@ -323,14 +324,16 @@ class Platformer extends Phaser.Scene {
 
         this.flying3Group.children.iterate(enemy => {
             enemy.body.setAllowGravity(false);
-            enemy.startY = enemy.y;
-            enemy.body.setVelocityY(-45); 
         });
 
         this.scissorEnemyGroup.children.iterate(enemy => {
             enemy.body.setAllowGravity(true);
-            enemy.body.setVelocityX(40);
         });
+
+        // Level 3 setup
+        if(selectedLevel === 3){
+            this.setupLevel3Enemies();
+        }
 
         my.sprite.player = this.physics.add.sprite(30, 200, "platformer_characters", "tile_0000.png");
         my.sprite.player.setCollideWorldBounds(true);
@@ -344,7 +347,7 @@ class Platformer extends Phaser.Scene {
             this.respawnPlayer(obj1);
         });
 
-        //falling platforms 
+        // Falling platforms 
         this.fallenPlatformTiles = [];
         this.triggeredFallingTiles = new Set();
 
@@ -372,37 +375,10 @@ class Platformer extends Phaser.Scene {
 
         this.physics.add.collider(this.enemyGroup, this.enemyCollisionLayer);
         this.physics.add.collider(this.unkillableEnemyGroup, this.enemyCollisionLayer);
-        this.physics.add.collider(this.scissorEnemyGroup, this.groundLayer);
-        this.physics.add.collider(this.scissorEnemyGroup, this.fallingPlatforms);
 
-        this.physics.add.overlap(my.sprite.player, this.flying3Group, (player, enemy) => {
-            if (player.body.velocity.y > 0 && player.y < enemy.y) {
-                enemy.destroy();
-                my.vfx.enemyPoof.explode(10, enemy.x, enemy.y);
-                this.enemy_kill_sfx.play();
-                player.body.setVelocityY(this.JUMP_VELOCITY / 1.5);
-                this.score += 150;
-                this.scoreText.setText(String(this.score).padStart(4, "0"));
-            } else {
-                this.respawnPlayer(player);
-                this.player_hit_sfx.play();
-                player.body.setVelocity(0, 0);
-            }
-        }, null, this);
-
-        this.physics.add.overlap(my.sprite.player, this.scissorEnemyGroup, (player, enemy) => {
-            if(this.isSliding){
-                enemy.destroy();
-                my.vfx.enemyPoof.explode(10, enemy.x, enemy.y);
-                this.enemy_kill_sfx.play();
-                this.score += 200;
-                this.scoreText.setText(String(this.score).padStart(4, "0"));
-            } else {
-                this.player_hit_sfx.play();
-                this.respawnPlayer(player);
-                player.body.setVelocity(0, 0);
-            }
-        }, null, this);
+        if(selectedLevel === 3){
+            this.setupLevel3Enemies();
+        }
 
         this.physics.add.overlap(my.sprite.player, this.coinGroup, (obj1, obj2) => {
             obj2.destroy();
@@ -771,39 +747,10 @@ class Platformer extends Phaser.Scene {
             }
         });
 
-        this.flying3Group.children.iterate(enemy => {
-            if(!enemy || !enemy.body){ return; }
-            enemy.play('enemy_fly', true);
-            const patrolRange = 18 * 4.5; // 4.5 tiles
-            if(enemy.y <= enemy.startY - patrolRange){
-                enemy.body.setVelocityY(45); // reached top — go down
-            } else if(enemy.y >= enemy.startY + patrolRange){
-                enemy.body.setVelocityY(-45); // reached bottom — go up
-            }
-        });
-
-        this.scissorEnemyGroup.children.iterate(enemy => {
-            if(!enemy || !enemy.body){ return; }
-            enemy.play('enemy_walk', true);
-
-            // Wall reversal
-            if(enemy.body.blocked.left){
-                enemy.body.setVelocityX(40);
-                enemy.setFlipX(true);
-            } else if(enemy.body.blocked.right){
-                enemy.body.setVelocityX(-40);
-                enemy.resetFlip();
-            }
-
-            const dir = enemy.body.velocity.x > 0 ? 1 : -1;
-            const edgeCheckX = enemy.x + dir * (enemy.width / 2 + 2);
-            const edgeCheckY = enemy.y + enemy.height / 2 + 4;
-            const tileBelow = this.groundLayer.getTileAtWorldXY(edgeCheckX, edgeCheckY);
-            if(!tileBelow && enemy.body.blocked.down){
-                enemy.body.setVelocityX(-enemy.body.velocity.x);
-                if(dir > 0){ enemy.resetFlip(); } else { enemy.setFlipX(true); }
-            }
-        });
+        // --- Level 3 specific update ---
+        if(selectedLevel === 3){
+            this.updateLevel3Enemies();
+        }
     }
 
     showRemainingDiamondsText(flag){
@@ -1071,6 +1018,84 @@ class Platformer extends Phaser.Scene {
         this.fallingPlatformSprites.children.iterate(platform => {
             if (platform) {
                 platform.destroy();
+            }
+        });
+    }
+
+    // Level 3 Helpers
+    setupLevel3Enemies() {
+        this.flying3Group.children.iterate(enemy => {
+            enemy.startY = enemy.y;
+            enemy.body.setVelocityY(-45);
+        });
+
+        this.scissorEnemyGroup.children.iterate(enemy => {
+            enemy.body.setVelocityX(40);
+        });
+        this.physics.add.collider(this.scissorEnemyGroup, this.groundLayer);
+        this.physics.add.collider(this.scissorEnemyGroup, this.fallingPlatforms);
+
+        this.physics.add.overlap(my.sprite.player, this.flying3Group, (player, enemy) => {
+            if(player.body.velocity.y > 0 && player.y < enemy.y){
+                enemy.destroy();
+                my.vfx.enemyPoof.explode(10, enemy.x, enemy.y);
+                this.enemy_kill_sfx.play();
+                player.body.setVelocityY(this.JUMP_VELOCITY / 1.5);
+                this.score += 150;
+                this.scoreText.setText(String(this.score).padStart(4, "0"));
+            } else {
+                this.respawnPlayer(player);
+                this.player_hit_sfx.play();
+                player.body.setVelocity(0, 0);
+            }
+        }, null, this);
+
+        this.physics.add.overlap(my.sprite.player, this.scissorEnemyGroup, (player, enemy) => {
+            if(this.isSliding){
+                enemy.destroy();
+                my.vfx.enemyPoof.explode(10, enemy.x, enemy.y);
+                this.enemy_kill_sfx.play();
+                this.score += 200;
+                this.scoreText.setText(String(this.score).padStart(4, "0"));
+            } else {
+                this.player_hit_sfx.play();
+                this.respawnPlayer(player);
+                player.body.setVelocity(0, 0);
+            }
+        }, null, this);
+    }
+
+    updateLevel3Enemies() {
+        this.flying3Group.children.iterate(enemy => {
+            if(!enemy || !enemy.body){ return; }
+            enemy.play('enemy_fly', true);
+            const patrolRange = 18 * 4.5; // ~4.5 tiles
+            if(enemy.y <= enemy.startY - patrolRange){
+                enemy.body.setVelocityY(45);
+            } else if(enemy.y >= enemy.startY + patrolRange){
+                enemy.body.setVelocityY(-45);
+            }
+        });
+
+        this.scissorEnemyGroup.children.iterate(enemy => {
+            if(!enemy || !enemy.body){ return; }
+            enemy.play('scissor_walk', true);
+
+            if(enemy.body.blocked.left){
+                enemy.body.setVelocityX(40);
+                enemy.setFlipX(true);
+            } else if(enemy.body.blocked.right){
+                enemy.body.setVelocityX(-40);
+                enemy.resetFlip();
+            }
+
+            const dir = enemy.body.velocity.x > 0 ? 1 : -1;
+            const edgeCheckX = enemy.x + dir * (enemy.width / 2 + 2);
+            const edgeCheckY = enemy.y + enemy.height / 2 + 4;
+            const tileBelow = this.groundLayer.getTileAtWorldXY(edgeCheckX, edgeCheckY);
+            if(!tileBelow && enemy.body.blocked.down){
+                enemy.body.setVelocityX(-enemy.body.velocity.x);
+                if(dir > 0){ enemy.resetFlip(); } else { enemy.setFlipX(true); }
             }
         });
     }
