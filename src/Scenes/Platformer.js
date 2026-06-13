@@ -922,7 +922,7 @@ class Platformer extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setInteractive();
 
         restartButton.on('pointerdown', () => {
-            gameStartTime = 0;
+            gameStartTime = Date.now();
             this.scene.start("loadScene");
         });
 
@@ -931,7 +931,7 @@ class Platformer extends Phaser.Scene {
 
         nextLevelButton.on('pointerdown', () => {
             selectedLevel++;
-            gameStartTime = 0;
+            gameStartTime = Date.now();
             if(selectedLevel === 2){
                 this.scene.start("cutscene1_2Scene");
             }
@@ -1103,14 +1103,8 @@ class Platformer extends Phaser.Scene {
                 return;
             }
             
-            this.tweens.add({
-                targets: button,
-                y: button.y + 3,
-                duration: 80,
-                yoyo: true,
-                ease: 'Power1'
-            });
-
+            this.activeButton = button;
+            button.setFrame(149);
             this.activateAppearingPlatforms();
         }, null, this);
 
@@ -1120,12 +1114,8 @@ class Platformer extends Phaser.Scene {
         const UPTIME = 10000;
         const WARN_TIME = 3000;
         
+        this.appearingActive = true;
         this.platform_appear_sfx.play();
-        this.time.delayedCall(8000, () => {
-            if(this.appearingActive){
-                this.platform_appear_sfx.play();
-            }
-        });
 
         if(this.appearingBlink){
             this.appearingBlink.stop();
@@ -1151,12 +1141,14 @@ class Platformer extends Phaser.Scene {
             if(this.appearingBlink){
                 this.appearingBlink.stop();
                 this.appearingBlink = null;
+                this.platform_appear_sfx.stop();
             }
-
+            this.tweens.killTweensOf(this.appearingPlatforms);
             this.appearingPlatforms.setAlpha(1);
             this.appearingPlatforms.setVisible(false);
             this.appearingCollider.active = false;
             this.appearingActive = false;
+            this.activeButton.setFrame(148);
         });
     }
 
