@@ -365,6 +365,10 @@ class Platformer extends Phaser.Scene {
             this.setupLevel2Enemies();
         }
 
+        if(selectedLevel === 3){
+            this.setupLevel3Enemies();
+        }
+
 
         // Falling platforms 
         this.fallenPlatformTiles = [];
@@ -775,7 +779,7 @@ class Platformer extends Phaser.Scene {
             this.updateLevel2Enemies();
         }
 
-        // --- Level 3 specific update ---
+        //
         if(selectedLevel === 3){
             this.updateLevel3Enemies();
         }
@@ -1106,7 +1110,7 @@ class Platformer extends Phaser.Scene {
                 yoyo: true,
                 ease: 'Power1'
             });
-            
+
             this.activateAppearingPlatforms();
         }, null, this);
 
@@ -1251,8 +1255,6 @@ class Platformer extends Phaser.Scene {
         });
 
         this.scissorEnemyGroup.children.iterate(enemy => {
-            enemy.y += 9;
-            enemy.body.reset(enemy.x, enemy.y);
             enemy.body.setVelocityX(40);
         });
         this.physics.add.collider(this.scissorEnemyGroup, this.groundLayer);
