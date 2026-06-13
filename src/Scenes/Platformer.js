@@ -60,7 +60,10 @@ class Platformer extends Phaser.Scene {
         this.aesthetics = this.map.createLayer("aesthetics", groundTilesets, 0, 0);
 
         this.enemyCollisionLayer = this.map.createLayer("Enemy-Collision", collTilesets, 0, 0);
+
+        this.dash_sfx = this.sound.add('dash_sfx', { volume: 0.5, loop: false });
         
+        this.platform_appear_sfx = this.sound.add('platform_appear_sfx', { volume: 0.5, loop: false });
 
         if(this.sys.animatedTiles) this.sys.animatedTiles.init(this.map);
 
@@ -362,10 +365,6 @@ class Platformer extends Phaser.Scene {
             this.setupLevel2Enemies();
         }
 
-        // Level 3 setup
-        if(selectedLevel === 3){
-            this.setupLevel3Enemies();
-        }
 
         // Falling platforms 
         this.fallenPlatformTiles = [];
@@ -816,6 +815,7 @@ class Platformer extends Phaser.Scene {
 
     startDash(direction) {
         this.isDashing = true;
+        this.dash_sfx.play();
 
         if(direction < 0){
             my.sprite.player.resetFlip();
@@ -1098,6 +1098,15 @@ class Platformer extends Phaser.Scene {
             if(this.appearingActive){
                 return;
             }
+            
+            this.tweens.add({
+                targets: button,
+                y: button.y + 3,
+                duration: 80,
+                yoyo: true,
+                ease: 'Power1'
+            });
+            
             this.activateAppearingPlatforms();
         }, null, this);
 
@@ -1107,7 +1116,12 @@ class Platformer extends Phaser.Scene {
         const UPTIME = 10000;
         const WARN_TIME = 3000;
         
-        this.appearingActive = true;
+        this.platform_appear_sfx.play();
+        this.time.delayedCall(8000, () => {
+            if(this.appearingActive){
+                this.platform_appear_sfx.play();
+            }
+        });
 
         if(this.appearingBlink){
             this.appearingBlink.stop();
@@ -1237,6 +1251,8 @@ class Platformer extends Phaser.Scene {
         });
 
         this.scissorEnemyGroup.children.iterate(enemy => {
+            enemy.y += 9;
+            enemy.body.reset(enemy.x, enemy.y);
             enemy.body.setVelocityX(40);
         });
         this.physics.add.collider(this.scissorEnemyGroup, this.groundLayer);

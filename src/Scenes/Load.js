@@ -33,6 +33,8 @@ class Load extends Phaser.Scene {
         this.load.audio("jump_sfx", "Jump.wav");
         this.load.audio("player_hit_sfx", "player_hit.wav");
         this.load.audio("checkpoint_sfx", "checkpoint.wav");
+        this.load.audio("dash_sfx", "dash.ogg");
+        this.load.audio("platform_appear_sfx", "countdown.mp3")
 
         this.load.spritesheet("tilemap_sheet", "tilemap_packed.png", { 
             frameWidth: 18,
